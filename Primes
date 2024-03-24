@@ -1,0 +1,81 @@
+import numpy as np
+from scipy.fft import fft, fftfreq, ifft
+import matplotlib.pyplot as plt
+import math
+
+#Side project thsi here is a list of prime videos, and it creates a large function that follows the pattern of prime numbers.
+
+# Function to generate the first N prime numbers
+def generate_primes(count):
+    primes = []
+    num = 2
+    while len(primes) < count:
+        if is_prime(num):
+            primes.append(num)
+        num += 1
+    return primes
+
+# Function to check if a number is prime
+def is_prime(n):
+    if n <= 1:
+        return False
+    elif n <= 3:
+        return True
+    elif n % 2 == 0 or n % 3 == 0:
+        return False
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0:
+            return False
+        i += 6
+    return True
+
+# Perform FFT on the first N prime numbers
+prime_count = 200
+prime_numbers = generate_primes(prime_count)
+num_samples = len(prime_numbers)
+fft_result = fft(prime_numbers)
+freqs = fftfreq(num_samples)
+
+# Identify peaks in FFT result to separate signals
+peaks_indices = np.where(np.abs(fft_result) > 10000)[0]  # Adjust threshold as needed
+
+# Combine separated signals into a single function
+combined_fft = np.zeros_like(fft_result)
+for peak_index in peaks_indices:
+    if peak_index < num_samples // 2:
+        combined_fft[peak_index] = fft_result[peak_index]  # Add positive frequency component
+        combined_fft[-peak_index] = fft_result[-peak_index]  # Add corresponding negative frequency component
+
+# Reconstruct the time-domain signal using inverse FFT
+combined_signal = np.real(ifft(combined_fft))
+
+# Print the mathematical function
+print("Mathematical Function representing Prime Numbers FFT:")
+print("f(t) = ", end="")
+
+# Print the individual frequency components
+for i, peak_index in enumerate(peaks_indices):
+    amplitude = np.abs(fft_result[peak_index])
+    phase = np.angle(fft_result[peak_index])
+    frequency = freqs[peak_index]
+    if i > 0:
+        print(" + ", end="")
+    print(f"{amplitude:.2f} * math.cos(2*math.pi * {frequency:.4f} * t + {phase:.4f})", end="")
+
+# Print the reconstructed time-domain signal
+print("\n\nReconstructed Time-Domain Signal:")
+print(combined_signal)
+
+# Print all generated prime numbers
+print("\nGenerated Prime Numbers:")
+print(prime_numbers)
+
+# Plot the FFT result
+plt.figure(figsize=(10, 6))
+plt.plot(freqs, np.abs(fft_result))
+plt.title('FFT of First 200 Prime Numbers')
+plt.xlabel('Frequency')
+plt.ylabel('Magnitude')
+plt.grid(True)
+plt.show()

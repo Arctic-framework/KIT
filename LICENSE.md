@@ -1,0 +1,1 @@
+This is not to be used in a commercial setting at all without direct permission from myself, which is available by asking me at arctic.framework@gmail.com. Furthermore in any publication or project that utilizes this please give me credit, I worked realy hard on this.

@@ -1,0 +1,79 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import yfinance as yf
+from scipy.fft import fft, fftfreq
+from sklearn.linear_model import LinearRegression
+
+#This script created by Brytan Kelly is meant for analysis of bitcoins priceing and perdicting the next minuets price point, but can be adapted for any set of time. It relys on FFT and linear regression, with unusually high accuracy in calling. Although this is version 1.0.
+
+# Fetch Bitcoin price data from Yahoo Finance
+btc_data = yf.download('BTC-USD', period='1d', interval='1m')
+price = btc_data['Close'].to_numpy()
+
+# Perform FFT
+num_samples = len(price)
+fft_result = fft(price)
+freqs = fftfreq(num_samples)
+
+# Identify peaks in FFT result to separate signals
+peaks_indices = np.where(np.abs(fft_result) > 10000)[0]  # Adjust threshold as needed
+num_peaks = len(peaks_indices)
+
+# Store price change relations for each separated signal
+price_change_relations = []
+
+# Plot original signal
+plt.figure(figsize=(12, 6))
+plt.subplot(num_peaks + 1, 1, 1)
+plt.plot(price, color='blue')
+plt.title('Original Bitcoin Price Signal')
+plt.xlabel('Time')
+plt.ylabel('Price')
+
+# Plot each separated signal and calculate price change relations
+for i, peak_index in enumerate(peaks_indices, start=1):
+    separated_signal = np.zeros_like(price, dtype=complex)
+    if peak_index < num_samples // 2:
+        separated_signal[peak_index] = fft_result[peak_index]  # Only keep the peak frequency component
+        separated_signal[-peak_index] = fft_result[-peak_index]  # Corresponding negative frequency component
+
+        # Shifting the separated signal to match as closely as possible
+        shifted_signal = np.fft.ifft(np.roll(separated_signal, -peak_index))
+
+        # Calculate price change relations
+        price_diff = price - np.real(shifted_signal)
+        price_change_relations.append(price_diff)
+
+        # Plotting shifted signal
+        plt.subplot(num_peaks + 1, 1, i + 1)
+        plt.plot(np.real(shifted_signal), color='orange')
+        plt.title(f'Separated Signal {i}')
+        plt.xlabel('Time')
+        plt.ylabel('Amplitude')
+
+# Convert price_change_relations to a numpy array
+price_change_relations = np.array(price_change_relations)
+
+# Reshape price_change_relations for linear regression
+X = np.arange(len(price)).reshape(-1, 1)
+y = price_change_relations.T
+
+# Perform linear regression
+model = LinearRegression()
+model.fit(X, y)
+
+# Predict the next price point
+next_price_index = len(price)
+next_price_change_relations = model.predict([[next_price_index]])
+
+# Calculate predicted next price point
+predicted_next_price = price[next_price_index - 1] + next_price_change_relations[0][-1]
+# Get current Bitcoin price
+current_price = price[-1]
+print("Current Bitcoin price:", current_price)
+print("Predicted next price point:", predicted_next_price / 2)
+print("Difference of:", current_price - (predicted_next_price / 2))
+
+
+plt.tight_layout()
+plt.show()

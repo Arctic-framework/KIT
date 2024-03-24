@@ -1,0 +1,44 @@
+import numpy as np
+import yfinance as yf
+from scipy.fft import fft, fftfreq, ifft
+
+#Created by Brytan Kelly 2024, as part of the KIT project, an experimental set of  highly complex mathematical perdiction systems.
+
+# Fetch Bitcoin price data from Yahoo Finance
+btc_data = yf.download('BTC-USD', period='1d', interval='1m')
+price = btc_data['Close'].to_numpy()
+
+# Perform FFT
+num_samples = len(price)
+fft_result = fft(price)
+freqs = fftfreq(num_samples)
+
+# Identify peaks in FFT result to separate signals
+peaks_indices = np.where(np.abs(fft_result) > 10000)[0]  # Adjust threshold as needed
+
+# Combine separated signals into a single function
+combined_fft = np.zeros_like(fft_result)
+for peak_index in peaks_indices:
+    if peak_index < num_samples // 2:
+        combined_fft[peak_index] = fft_result[peak_index]  # Add positive frequency component
+        combined_fft[-peak_index] = fft_result[-peak_index]  # Add corresponding negative frequency component
+
+# Reconstruct the time-domain signal using inverse FFT
+combined_signal = np.real(ifft(combined_fft))
+
+# Print the mathematical function
+print("Mathematical Function representing Bitcoin Price:")
+print("f(t) = ", end="")
+
+# Print the individual frequency components
+for i, peak_index in enumerate(peaks_indices):
+    amplitude = np.abs(fft_result[peak_index])
+    phase = np.angle(fft_result[peak_index])
+    frequency = freqs[peak_index]
+    if i > 0:
+        print(" + ", end="")
+    print(f"{amplitude:.2f} * cos(2π * {frequency:.4f} * t + {phase:.4f})", end="")
+
+# Print the reconstructed time-domain signal
+print("\n\nReconstructed Time-Domain Signal:")
+print(combined_signal)
